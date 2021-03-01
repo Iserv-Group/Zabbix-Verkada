@@ -1,0 +1,192 @@
+zabbix_export:
+  version: '5.2'
+  date: '2021-03-01T21:07:40Z'
+  groups:
+    -
+      name: 'Auto Discover'
+    -
+      name: Templates/api
+    -
+      name: Templates/Verkada
+  templates:
+    -
+      template: 'Verkada Camera Discovery'
+      name: 'Verkada Camera Discovery'
+      description: 'Add''s site monitors and discovers camera''s for monitoring.'
+      groups:
+        -
+          name: Templates/api
+        -
+          name: Templates/Verkada
+      applications:
+        -
+          name: Cameras
+      items:
+        -
+          name: 'Site Data Pull'
+          type: EXTERNAL
+          key: 'verkada.sh[site.data,{$ORG},{$SITE_NAME}]'
+          trends: '0'
+          value_type: TEXT
+        -
+          name: 'Site Status'
+          type: DEPENDENT
+          key: Verkada.site.status
+          delay: '0'
+          preprocessing:
+            -
+              type: JSONPATH
+              parameters:
+                - '$.*.status'
+            -
+              type: TRIM
+              parameters:
+                - '[]'
+            -
+              type: JAVASCRIPT
+              parameters:
+                - |
+                  var myArray = value.split(",").map(Number);
+                  var max = myArray.reduce(function(a, b) {
+                      return Math.max(a, b);
+                  });
+                  return max
+          master_item:
+            key: 'verkada.sh[site.data,{$ORG},{$SITE_NAME}]'
+          triggers:
+            -
+              expression: '{max(5m)}=0'
+              name: 'Verkada {$ORG} {$SITE_NAME} All Cameras Unreachable for 5 min'
+              priority: INFO
+              description: 'All of the cameras for Organization {$ORG} at Site {$SITE_NAME} have been unreachable for 5 min. This is probably due to a site wide network issue.'
+              dependencies:
+                -
+                  name: 'Verkada {$ORG} {$SITE_NAME} All Cameras Unreachable for 15 min'
+                  expression: '{Verkada Camera Discovery:Verkada.site.status.max(15m)}=0'
+                -
+                  name: 'Verkada {$ORG} {$SITE_NAME} All Cameras Unreachable for 30 min'
+                  expression: '{Verkada Camera Discovery:Verkada.site.status.max(30m)}=0'
+            -
+              expression: '{max(15m)}=0'
+              name: 'Verkada {$ORG} {$SITE_NAME} All Cameras Unreachable for 15 min'
+              priority: WARNING
+              description: 'All of the cameras for Organization {$ORG} at Site {$SITE_NAME} have been unreachable for 15 min. This is probably due to a site wide network issue.'
+              dependencies:
+                -
+                  name: 'Verkada {$ORG} {$SITE_NAME} All Cameras Unreachable for 30 min'
+                  expression: '{Verkada Camera Discovery:Verkada.site.status.max(30m)}=0'
+            -
+              expression: '{max(30m)}=0'
+              name: 'Verkada {$ORG} {$SITE_NAME} All Cameras Unreachable for 30 min'
+              priority: AVERAGE
+              description: 'All of the cameras for Organization {$ORG} at Site {$SITE_NAME} have been unreachable for 30 min. This is probably due to a site wide network issue.'
+      discovery_rules:
+        -
+          name: 'Discover Cameras'
+          type: EXTERNAL
+          key: 'verkada.sh[camera.discovery,{$ORG},{$SITE_NAME}]'
+          delay: 1d
+          lifetime: 7d
+          item_prototypes:
+            -
+              name: 'Verkada {#CAMERA_NAME} Status'
+              type: DEPENDENT
+              key: 'verkada.camera.status[{#CAMERA_ID}]'
+              delay: '0'
+              applications:
+                -
+                  name: Cameras
+              preprocessing:
+                -
+                  type: JSONPATH
+                  parameters:
+                    - '$[?(@.camera_id == ''{#CAMERA_ID}'')].status'
+                -
+                  type: TRIM
+                  parameters:
+                    - '[]'
+              master_item:
+                key: 'verkada.sh[site.data,{$ORG},{$SITE_NAME}]'
+              trigger_prototypes:
+                -
+                  expression: '{max(10m)}=0'
+                  name: 'Verkada Camera {#CAMERA_NAME} Unreachable for 10 min'
+                  priority: INFO
+                  description: 'Verkada camera {#CAMERA_NAME} under the organization {#ORG_NAME} at site {#SITE} has been unreachable from the Verkada cloud for 10 min'
+                  dependencies:
+                    -
+                      name: 'Verkada Camera {#CAMERA_NAME} Unreachable for 20 min'
+                      expression: '{Verkada Camera Discovery:verkada.camera.status[{#CAMERA_ID}].max(20m)}=0'
+                    -
+                      name: 'Verkada Camera {#CAMERA_NAME} Unreachable for 35 min'
+                      expression: '{Verkada Camera Discovery:verkada.camera.status[{#CAMERA_ID}].max(35m)}=0'
+                    -
+                      name: 'Verkada {$ORG} {$SITE_NAME} All Cameras Unreachable for 5 min'
+                      expression: '{Verkada Camera Discovery:Verkada.site.status.max(5m)}=0'
+                -
+                  expression: '{max(20m)}=0'
+                  name: 'Verkada Camera {#CAMERA_NAME} Unreachable for 20 min'
+                  priority: WARNING
+                  description: 'Verkada camera {#CAMERA_NAME} under the organization {#ORG_NAME} at site {#SITE} has been unreachable from the Verkada cloud for 20 min'
+                  dependencies:
+                    -
+                      name: 'Verkada Camera {#CAMERA_NAME} Unreachable for 35 min'
+                      expression: '{Verkada Camera Discovery:verkada.camera.status[{#CAMERA_ID}].max(35m)}=0'
+                    -
+                      name: 'Verkada {$ORG} {$SITE_NAME} All Cameras Unreachable for 5 min'
+                      expression: '{Verkada Camera Discovery:Verkada.site.status.max(5m)}=0'
+                    -
+                      name: 'Verkada {$ORG} {$SITE_NAME} All Cameras Unreachable for 15 min'
+                      expression: '{Verkada Camera Discovery:Verkada.site.status.max(15m)}=0'
+                -
+                  expression: '{max(35m)}=0'
+                  name: 'Verkada Camera {#CAMERA_NAME} Unreachable for 35 min'
+                  priority: AVERAGE
+                  description: 'Verkada camera {#CAMERA_NAME} under the organization {#ORG_NAME} at site {#SITE} has been unreachable from the Verkada cloud for 35 min'
+                  dependencies:
+                    -
+                      name: 'Verkada {$ORG} {$SITE_NAME} All Cameras Unreachable for 5 min'
+                      expression: '{Verkada Camera Discovery:Verkada.site.status.max(5m)}=0'
+                    -
+                      name: 'Verkada {$ORG} {$SITE_NAME} All Cameras Unreachable for 15 min'
+                      expression: '{Verkada Camera Discovery:Verkada.site.status.max(15m)}=0'
+                    -
+                      name: 'Verkada {$ORG} {$SITE_NAME} All Cameras Unreachable for 30 min'
+                      expression: '{Verkada Camera Discovery:Verkada.site.status.max(30m)}=0'
+    -
+      template: 'Verkada Site Discovery'
+      name: 'Verkada Site Discovery'
+      description: 'Discovers Organizations and sites for Verkada monitoring'
+      groups:
+        -
+          name: Templates/api
+        -
+          name: Templates/Verkada
+      discovery_rules:
+        -
+          name: 'Discover Verkada Sites'
+          type: EXTERNAL
+          key: 'verkada.sh[site.discovery]'
+          delay: 1d
+          description: 'Discovers Verkada Organizations and sites. Creates a single Host for all camera''s at a site.'
+          host_prototypes:
+            -
+              host: 'Verkada {#ORG} {#SITE_NAME}'
+              name: 'Verkada {#ORG} {#SITE_NAME}'
+              group_links:
+                -
+                  group:
+                    name: 'Auto Discover'
+              group_prototypes:
+                -
+                  name: 'Verkada/{#ORG}'
+              templates:
+                -
+                  name: 'Verkada Camera Discovery'
+              macros:
+                -
+                  macro: '{$ORG}'
+                  value: '{#ORG}'
+                -
+                  macro: '{$SITE_NAME}'
+                  value: '{#SITE_NAME}'
