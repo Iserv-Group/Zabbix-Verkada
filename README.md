@@ -8,14 +8,14 @@
  1.	Start by downloading the repository and moving both scripts and the verkada_creds.csv file to your Zabbix installation.
  2.	Place the verkada_discovery.sh script and verkada_creds.csv in a secure location on the Zabbix server and limit the read/write privileges on both files to super users to protect your API keys. 
  3. Add a list of Verkada Organizations that you want to monitor to the verkada_creds.csv file. 
-	i.The organization can be whatever you want and don't have to be uniq, but they should represent the name of the Organization as it's found in Verkada. They will be used to place hosts/sites into groups within Zabbix and for the name of of those Zabbix hosts.
-	ii. The Organization ID and API key can be found in the dashboard by navigating to Admin > Verkada API
+	1.The organization can be whatever you want and don't have to be uniq, but they should represent the name of the Organization as it's found in Verkada. They will be used to place hosts/sites into groups within Zabbix and for the name of of those Zabbix hosts.
+	2. The Organization ID and API key can be found in the dashboard by navigating to Admin > Verkada API
  4.	Modify the variables at the top of the verkada_discovery.sh script
-	i. Make sure the output_folder variable points to the external scripts folder on your Zabbix host.
-	ii. Make sure the orgs variable points to the credential file you modified earlier. 
+	1. Make sure the output_folder variable points to the external scripts folder on your Zabbix host.
+	2. Make sure the orgs variable points to the credential file you modified earlier. 
  5. Place the verkada.sh script in the externalscripts folder.
  6. Modify the folder variables at the top of the verkada.sh script to match your installation 
-	i. Make sure the output_folder variable points to the external scripts folder on your Zabbix host.
+	1. Make sure the output_folder variable points to the external scripts folder on your Zabbix host.
  7.	Run the verkada_status.sh script to see if a valid json file is created at externalscripts/verkada.json
  7.	Run the verkada_status.sh script to see if a valid json file is created at externalscripts/verkada.json
  8.	Assuming the test was successful, add the following line to a superuser crontab that has privileges to read/execute both verkada_discovery.sh and verkada_creds.csv. Make sure to use the full path to both scripts, instead of the examples below. 
